@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { InvokeLLM } from "@/api/integrations";
+import { invokeLLM } from "@/api/openaiService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MapPin, Link as LinkIcon, Check, AlertCircle } from "lucide-react";
-import { createPoll } from "@/api/functions";
+import { createPoll } from "@/components/instabackService";
 import { useToast } from "@/components/ui/use-toast";
 
 function isValidHttpUrl(url) {
@@ -73,7 +73,7 @@ export default function VerifiedVenueFinder({ eventId }) {
     `.trim();
 
     try {
-      const res = await InvokeLLM({
+      const res = await invokeLLM({
         prompt,
         add_context_from_internet: true,
         response_json_schema: {

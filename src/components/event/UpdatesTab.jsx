@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 import { Plus, Megaphone, Pin, MoreVertical, Trash2, Edit, Loader2, AlertTriangle, Info, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatIsraelDate } from '@/components/utils/dateHelpers';
-import { base44 } from '@/api/base44Client';
+import { listEventUpdates, createEventUpdate, updateEventUpdate, deleteEventUpdate } from '@/components/instabackService';
 
 const priorityConfig = {
   low: { label: 'נמוכה', color: 'bg-gray-100 text-gray-700', icon: null },
@@ -102,7 +102,7 @@ export default function UpdatesTab({ eventId, currentUser, canManage = false }) 
   const loadUpdates = async () => {
     try {
       setIsLoading(true);
-      const data = await base44.entities.EventUpdate.filter({ eventId }, '-created_date');
+      const data = await listEventUpdates(eventId);
       // Sort: pinned first, then by date
       const sorted = [...(data || [])].sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
@@ -143,14 +143,14 @@ export default function UpdatesTab({ eventId, currentUser, canManage = false }) 
     setIsSaving(true);
     try {
       if (editingUpdate) {
-        await base44.entities.EventUpdate.update(editingUpdate.id, {
+        await updateEventUpdate(editingUpdate.id, {
           title: formData.title.trim(),
           content: formData.content.trim(),
           priority: formData.priority
         });
         toast.success('העדכון נשמר');
       } else {
-        await base44.entities.EventUpdate.create({
+        await createEventUpdate({
           eventId,
           title: formData.title.trim(),
           content: formData.content.trim(),
@@ -175,7 +175,7 @@ export default function UpdatesTab({ eventId, currentUser, canManage = false }) 
     if (!confirm(`למחוק את העדכון "${update.title}"?`)) return;
     
     try {
-      await base44.entities.EventUpdate.delete(update.id);
+      await deleteEventUpdate(update.id);
       toast.success('העדכון נמחק');
       loadUpdates();
     } catch (error) {
@@ -186,7 +186,7 @@ export default function UpdatesTab({ eventId, currentUser, canManage = false }) 
 
   const handleTogglePin = async (update) => {
     try {
-      await base44.entities.EventUpdate.update(update.id, {
+      await updateEventUpdate(update.id, {
         isPinned: !update.isPinned
       });
       toast.success(update.isPinned ? 'ההצמדה בוטלה' : 'העדכון הוצמד');

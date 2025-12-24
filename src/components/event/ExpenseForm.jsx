@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { UploadFile } from '@/api/integrations';
+import { uploadFileToInstaback } from '@/components/instabackService';
 import { Loader2, Paperclip } from 'lucide-react';
 
 export default function ExpenseForm({ eventId, members = [], currentUser, onCreated }) {
@@ -19,7 +19,7 @@ export default function ExpenseForm({ eventId, members = [], currentUser, onCrea
     if (!file) return;
     setIsUploading(true);
     try {
-      const { file_url } = await UploadFile({ file });
+      const { file_url } = await uploadFileToInstaback(file);
       setReceiptUrl(file_url);
     } finally {
       setIsUploading(false);

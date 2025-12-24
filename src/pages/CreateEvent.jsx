@@ -7,7 +7,7 @@ import EventCreationChat from '@/components/ai/EventCreationChat';
 import EventTemplateSelector from '@/components/event/EventTemplateSelector';
 import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
   notifyAdminsNewEvent,
 } from '@/components/instabackService';

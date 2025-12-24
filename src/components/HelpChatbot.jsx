@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Loader2, MessageCircle, Sparkles, CheckCircle2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiService';
 import { APP_DOCUMENTATION } from './APP_DOCUMENTATION';
 
 // מיפוי דפים לשאלות מהירות רלוונטיות
@@ -273,7 +273,7 @@ export default function HelpChatbot() {
     setIsLoading(true);
 
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await invokeLLM({
         prompt: `אתה בוט עזרה לאפליקציית Planora - אפליקציה לתכנון וניהול אירועים.
         
 תפקידך הוא לעזור למשתמשים להבין איך להשתמש באפליקציה בלבד. ענה בעברית, בצורה ידידותית וברורה.

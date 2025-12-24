@@ -1,20 +1,31 @@
-# Base44 App
+# Planora App
 
+אפליקציית תכנון וניהול אירועים.
 
-This app was created automatically by Base44.
-It's a Vite+React app that communicates with the Base44 API.
-
-## Running the app
+## הפעלת האפליקציה
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Building the app
+## בניית האפליקציה
 
 ```bash
 npm run build
 ```
 
-For more information and support, please contact Base44 support at app@base44.com.
+## הגדרות סביבה
+
+צור קובץ `.env` בתיקיית השורש עם המשתנים הבאים:
+
+```
+VITE_OPENAI_API_KEY=sk-your-openai-api-key
+```
+
+## טכנולוגיות
+
+- **Frontend**: React + Vite
+- **UI**: Tailwind CSS + Radix UI
+- **Backend**: InstaBack
+- **AI**: OpenAI API

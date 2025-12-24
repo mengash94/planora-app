@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User } from '@/api/entities';
-import { Announcement } from '@/api/entities/Announcement';
+import { useAuth } from '@/components/AuthProvider';
+import { listAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '@/components/instabackService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,33 +15,32 @@ import { createPageUrl } from '@/utils';
 
 export default function AdminAnnouncementsPage() {
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
+    const { user, isLoading: authLoading } = useAuth();
     const [announcements, setAnnouncements] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
 
     useEffect(() => {
-        const checkUserAndLoadData = async () => {
-            try {
-                const currentUser = await User.me();
-                if (currentUser.role !== 'admin') {
-                    navigate(createPageUrl('Home'));
-                    return;
-                }
-                setUser(currentUser);
-                await fetchAnnouncements();
-            } catch (e) {
-                navigate(createPageUrl('Home'));
-            }
-            setIsLoading(false);
-        };
-        checkUserAndLoadData();
-    }, [navigate]);
+        if (authLoading) return;
+        
+        if (!user || user.role !== 'admin') {
+            navigate(createPageUrl('Home'));
+            return;
+        }
+        
+        fetchAnnouncements();
+    }, [user, authLoading, navigate]);
 
     const fetchAnnouncements = async () => {
-        const data = await Announcement.list('-created_date');
-        setAnnouncements(data);
+        try {
+            const data = await listAnnouncements();
+            setAnnouncements(data);
+        } catch (error) {
+            console.error('Failed to fetch announcements:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleEdit = (announcement) => {
@@ -51,7 +50,7 @@ export default function AdminAnnouncementsPage() {
 
     const handleDelete = async (id) => {
         if (window.confirm('האם אתה בטוח שברצונך למחוק הכרזה זו?')) {
-            await Announcement.delete(id);
+            await deleteAnnouncement(id);
             await fetchAnnouncements();
         }
     };
@@ -63,9 +62,9 @@ export default function AdminAnnouncementsPage() {
 
     const handleSubmit = async (formData) => {
         if (editingAnnouncement) {
-            await Announcement.update(editingAnnouncement.id, formData);
+            await updateAnnouncement(editingAnnouncement.id, formData);
         } else {
-            await Announcement.create(formData);
+            await createAnnouncement(formData);
         }
         await fetchAnnouncements();
         setIsDialogOpen(false);
@@ -74,7 +73,7 @@ export default function AdminAnnouncementsPage() {
 
     const createWelcomeMessage = async () => {
         try {
-            const result = await Announcement.create({
+            const result = await createAnnouncement({
                 title: "🎉 ברוכים הבאים ל-PlanOra!",
                 content: `## 👋 שלום וברוך הבא!
 
@@ -248,10 +247,10 @@ export default function AdminAnnouncementsPage() {
                                 <TableRow key={ann.id}>
                                     <TableCell className="font-medium">{ann.title}</TableCell>
                                     <TableCell>{ann.type}</TableCell>
-                                    <TableCell>{ann.target_audience}</TableCell>
-                                    <TableCell>{new Date(ann.end_date) < new Date() ? 'לא פעיל' : 'פעיל'}</TableCell>
-                                    <TableCell>{new Date(ann.start_date).toLocaleDateString('he-IL')}</TableCell>
-                                    <TableCell>{new Date(ann.end_date).toLocaleDateString('he-IL')}</TableCell>
+                                    <TableCell>{ann.targetAudience || ann.target_audience}</TableCell>
+                                            <TableCell>{new Date(ann.endDate || ann.end_date) < new Date() ? 'לא פעיל' : 'פעיל'}</TableCell>
+                                    <TableCell>{new Date(ann.startDate || ann.start_date).toLocaleDateString('he-IL')}</TableCell>
+                                    <TableCell>{new Date(ann.endDate || ann.end_date).toLocaleDateString('he-IL')}</TableCell>
                                     <TableCell className="space-x-2">
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(ann)}><Edit className="w-4 h-4" /></Button>
                                         <Button variant="ghost" size="icon" onClick={() => handleDelete(ann.id)} className="text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></Button>
@@ -278,15 +277,17 @@ function AnnouncementFormDialog({ isOpen, onOpenChange, announcement, onSubmit }
 
     useEffect(() => {
         if (announcement) {
+            const startDate = announcement.startDate || announcement.start_date;
+            const endDate = announcement.endDate || announcement.end_date;
             setFormData({
                 title: announcement.title || '',
                 content: announcement.content || '',
                 type: announcement.type || 'info',
-                start_date: announcement.start_date ? announcement.start_date.split('T')[0] : '',
-                end_date: announcement.end_date ? announcement.end_date.split('T')[0] : '',
-                target_audience: announcement.target_audience || 'all',
-                new_user_days_threshold: announcement.new_user_days_threshold || 3,
-                dismissible_type: announcement.dismissible_type || 'x_button',
+                start_date: startDate ? startDate.split('T')[0] : '',
+                end_date: endDate ? endDate.split('T')[0] : '',
+                target_audience: announcement.targetAudience || announcement.target_audience || 'all',
+                new_user_days_threshold: announcement.newUserDaysThreshold || announcement.new_user_days_threshold || 3,
+                dismissible_type: announcement.requireConfirm ? 'confirm_button' : (announcement.dismissible_type || 'x_button'),
             });
         } else {
             setFormData({

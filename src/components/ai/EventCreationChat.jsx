@@ -17,7 +17,7 @@ import {
     createItineraryItem,
     createRecurringEventRule
 } from '@/components/instabackService';
-import { base44 } from '@/api/base44Client';
+import { invokeLLM } from '@/api/openaiService';
 import DateRangePicker from '@/components/ui/DateRangePicker';
 
 const STEPS = [
@@ -924,7 +924,7 @@ export default function EventCreationChat({ onEventCreated, currentUser }) {
   "extractedData": { כל מידע רלוונטי שחילצת מהקלט או null }
 }`;
 
-            const result = await base44.integrations.Core.InvokeLLM({
+            const result = await invokeLLM({
                 prompt,
                 add_context_from_internet: false,
                 response_json_schema: {
@@ -1046,7 +1046,7 @@ export default function EventCreationChat({ onEventCreated, currentUser }) {
 
 החזר רק JSON תקין:`;
 
-            const result = await base44.integrations.Core.InvokeLLM({
+            const result = await invokeLLM({
                 prompt,
                 add_context_from_internet: false,
                 response_json_schema: {
@@ -1246,7 +1246,7 @@ ${places.slice(0, 20).map((p, i) => `${i + 1}. ${p.name}`).join('\n')}
 **חשוב מאוד: אם השם כבר בעברית, השתמש בו בדיוק כמו שהוא ב-translated!**`;
 
             try {
-                const translatedNames = await base44.integrations.Core.InvokeLLM({
+                const translatedNames = await invokeLLM({
                     prompt: translationPrompt,
                     add_context_from_internet: false,
                     response_json_schema: {
@@ -1813,7 +1813,7 @@ ${data.isRecurring && data.recurrenceRule ? `- תדירות: ${data.recurrenceRu
 
 החזר JSON תקין:`;
 
-            const plan = await base44.integrations.Core.InvokeLLM({
+            const plan = await invokeLLM({
                 prompt,
                 add_context_from_internet: false,
                 response_json_schema: {

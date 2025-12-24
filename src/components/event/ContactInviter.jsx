@@ -10,9 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Phone, Mail, MessageSquare, Trash2, Send, CheckCircle2, Clock, XCircle, AlertTriangle } from 'lucide-react';
-import { Contact } from '@/api/entities/Contact';
-import { addContact } from '@/api/functions';
-import { deleteContact } from '@/api/functions';
+import { listContacts, addContact, deleteContact } from '@/components/instabackService';
 
 export default function ContactInviter({ isOpen, onOpenChange, eventId, eventTitle, onContactAdded }) {
   const [contacts, setContacts] = useState([]);
@@ -32,7 +30,7 @@ export default function ContactInviter({ isOpen, onOpenChange, eventId, eventTit
     
     setIsLoading(true);
     try {
-      const eventContacts = await Contact.filter({ event_id: eventId }, '-created_date');
+      const eventContacts = await listContacts(eventId);
       setContacts(eventContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);

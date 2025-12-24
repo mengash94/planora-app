@@ -1,5 +1,3 @@
-import { proxyInstaback } from "@/api/functions";
-
 // --- Network Helpers (defined inline for a fully functional single file) ---
 // Improved network detection
 const isOnline = () => {
@@ -196,44 +194,12 @@ const _fetchWithAuth = async (endpoint, options = {}, retryCount = 0) => {
         const isNetError = isNetworkError(error);
         const shouldRetry = isNetError && retryCount < maxRetries;
 
-        // Try proxy fallback for network errors (if not already tried via proxy)
-        // Proxy fallback - רק פעם אחת
-        if (isNetError && !options?._viaProxy && retryCount === 0) {
-            try {
-                console.log(`[InstaBack] Network error detected, trying proxy fallback...`);
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'accept': 'application/json',
-                    ...(options.headers || {})
-                };
-                delete headers['Authorization'];
-
-                const payload = {
-                    endpoint,
-                    options: {
-                        method: options.method || 'GET',
-                        headers,
-                        body: options.body ?? null
-                    },
-                    token: currentToken || null
-                };
-
-                const { data } = await proxyInstaback(payload);
-                console.log(`[InstaBack] Proxy fallback successful for ${endpoint}`);
-                return typeof data === 'undefined' || data === null ? { success: true } : data;
-            } catch (proxyError) {
-                console.warn('[InstaBack] Proxy failed:', proxyError?.message);
-                // Continue to retry logic below
-            }
-        }
-
         // Retry logic with exponential backoff
-        // ✅ Retry עם delay קצר יותר
         if (shouldRetry) {
-            const delay = 500; // ✅ הפחתה מ-1000 ל-500ms
+            const delay = 500;
             console.log(`[InstaBack] Retrying ${endpoint} in ${delay}ms`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            return _fetchWithAuth(endpoint, { ...options, _viaProxy: options?._viaProxy || false }, retryCount + 1);
+            return _fetchWithAuth(endpoint, options, retryCount + 1);
         }
 
         // After all retries failed, throw a user-friendly error
@@ -2270,7 +2236,80 @@ export const deleteTaskTemplate = async (taskTemplateId) => {
     }
 };
 
-// --- Announcements ---
+// --- Announcements / System Messages ---
+export const listAnnouncements = async () => {
+    const res = await _fetchWithAuth('/SystemMessage', { method: 'GET' });
+    const messages = Array.isArray(res) ? res : (res?.items || []);
+    return messages.sort((a, b) => new Date(b.created_date || b.createdAt) - new Date(a.created_date || a.createdAt));
+};
+
+export const createAnnouncement = async (data) => {
+    const payload = {
+        title: data.title,
+        content: data.content,
+        type: data.type || 'info',
+        targetAudience: data.target_audience || 'all',
+        startDate: data.start_date,
+        endDate: data.end_date,
+        priority: data.priority || 'normal',
+        dismissible: data.dismissible !== false,
+        requireConfirm: data.dismissible_type === 'confirm_button',
+        isActive: true,
+        newUserDaysThreshold: data.new_user_days_threshold || 3,
+        displayMode: 'banner',
+        created_date: new Date().toISOString()
+    };
+    return _fetchWithAuth('/SystemMessage', { method: 'POST', body: JSON.stringify(payload) });
+};
+
+export const updateAnnouncement = async (id, data) => {
+    if (!id) throw new Error('id is required');
+    const payload = {};
+    if (data.title !== undefined) payload.title = data.title;
+    if (data.content !== undefined) payload.content = data.content;
+    if (data.type !== undefined) payload.type = data.type;
+    if (data.target_audience !== undefined) payload.targetAudience = data.target_audience;
+    if (data.start_date !== undefined) payload.startDate = data.start_date;
+    if (data.end_date !== undefined) payload.endDate = data.end_date;
+    if (data.new_user_days_threshold !== undefined) payload.newUserDaysThreshold = data.new_user_days_threshold;
+    if (data.dismissible_type !== undefined) payload.requireConfirm = data.dismissible_type === 'confirm_button';
+    return _fetchWithAuth(`/SystemMessage/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+};
+
+export const deleteAnnouncement = async (id) => {
+    if (!id) throw new Error('id is required');
+    return _fetchWithAuth(`/SystemMessage/${id}`, { method: 'DELETE' });
+};
+
+// --- Contacts ---
+export const listContacts = async (eventId) => {
+    if (!eventId) throw new Error('eventId is required');
+    const res = await _fetchWithAuth(`/Contact?event_id=${encodeURIComponent(eventId)}`, { method: 'GET' });
+    const contacts = Array.isArray(res) ? res : (res?.items || []);
+    return contacts.sort((a, b) => new Date(b.created_date || b.createdAt) - new Date(a.created_date || a.createdAt));
+};
+
+export const addContact = async (data) => {
+    if (!data.event_id) throw new Error('event_id is required');
+    const payload = {
+        event_id: data.event_id,
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        invitation_method: data.invitation_method || 'whatsapp',
+        notes: data.notes || '',
+        status: 'pending',
+        created_date: new Date().toISOString()
+    };
+    return _fetchWithAuth('/Contact', { method: 'POST', body: JSON.stringify(payload) });
+};
+
+export const deleteContact = async ({ contactId }) => {
+    if (!contactId) throw new Error('contactId is required');
+    return _fetchWithAuth(`/Contact/${contactId}`, { method: 'DELETE' });
+};
+
 export const getAnnouncements = async () => {
     try {
         const response = await _fetchWithAuth('/SystemMessage', { method: 'GET' });
@@ -4416,4 +4455,41 @@ export const updateAppVersion = async (id, data) => {
 export const deleteAppVersion = async (id) => {
     if (!id) throw new Error('id is required');
     return _fetchWithAuth(`/AppVersion/${id}`, { method: 'DELETE' });
+};
+
+// --- Event Updates ---
+export const listEventUpdates = async (eventId) => {
+    if (!eventId) throw new Error('eventId is required');
+    const res = await _fetchWithAuth(`/EventUpdate?eventId=${encodeURIComponent(eventId)}`, { method: 'GET' });
+    const updates = Array.isArray(res) ? res : (res?.items || []);
+    // Sort by created_date descending
+    return updates.sort((a, b) => new Date(b.created_date || b.createdAt) - new Date(a.created_date || a.createdAt));
+};
+
+export const createEventUpdate = async (data) => {
+    if (!data.eventId) throw new Error('eventId is required');
+    if (!data.title) throw new Error('title is required');
+    
+    const payload = {
+        eventId: data.eventId,
+        title: data.title,
+        content: data.content || '',
+        priority: data.priority || 'normal',
+        authorId: data.authorId || null,
+        authorName: data.authorName || null,
+        isPinned: data.isPinned || false,
+        created_date: new Date().toISOString()
+    };
+    
+    return _fetchWithAuth('/EventUpdate', { method: 'POST', body: JSON.stringify(payload) });
+};
+
+export const updateEventUpdate = async (updateId, data) => {
+    if (!updateId) throw new Error('updateId is required');
+    return _fetchWithAuth(`/EventUpdate/${updateId}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const deleteEventUpdate = async (updateId) => {
+    if (!updateId) throw new Error('updateId is required');
+    return _fetchWithAuth(`/EventUpdate/${updateId}`, { method: 'DELETE' });
 };
